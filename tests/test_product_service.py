@@ -125,3 +125,27 @@ class TestProductService:
         """Test that requests without token are rejected"""
         response = requests.get(f"{GATEWAY_BASE_URL}/products")
         assert response.status_code == 401  # Unauthorized
+
+    def test_unverified_user_blocked_from_products(self):
+        """Test that unverified users cannot access product service"""
+        # Get token for testuserUNV (only has 'unverified-user' role)
+        data = {
+            "client_id": TEST_CLIENT_ID,
+            "username": "testuserUNV",
+            "password": TEST_PASSWORD,
+            "grant_type": "password"
+        }
+    
+        response = requests.post(
+            KEYCLOAK_TOKEN_URL,
+            data=data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+    
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+    
+        # Should get 403 Forbidden (RBAC blocks unverified users)
+        response = requests.get(f"{GATEWAY_BASE_URL}/products", headers=headers)
+        assert response.status_code == 403  # RBAC denial

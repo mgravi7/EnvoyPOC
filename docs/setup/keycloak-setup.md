@@ -191,6 +191,7 @@ openssl rand -base6432
 
 | Username | Password | Roles |
 |-------------|------------|------------------------------------------------|
+| testuserUNV | testpass | unverified-user |
 | testuser | testpass | user |
 | adminuser | adminpass | user, admin, customer-manager, product-manager |
 | testuserCM | testpass | user, customer-manager |
@@ -251,12 +252,13 @@ docker-compose up -d --build
 
 ### Issue: "401 Unauthorized" even with token
 **Solutions:**
-1. Verify token hasn't expired (default:5 minutes)
-2. Check that Keycloak is accessible from gateway container:
+1. Verify the user has RBAC roles required by the endpoint
+2. Verify token hasn't expired (default:5 minutes)
+3. Check that Keycloak is accessible from gateway container:
  ```bash
  docker-compose exec gateway ping keycloak
  ```
-3. Verify JWKS endpoint is accessible:
+4. Verify JWKS endpoint is accessible:
  ```bash
  docker-compose exec gateway curl http://keycloak:8080/realms/api-gateway-poc/protocol/openid-connect/certs
  ```

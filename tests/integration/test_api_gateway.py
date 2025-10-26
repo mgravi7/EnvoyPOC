@@ -174,3 +174,86 @@ def test_unauthorized_access_without_token():
     # Test product service
     response = requests.get(f"{BASE_URL}/products")
     assert response.status_code == 401  # Unauthorized
+
+def test_rbac_unverified_user_access():
+    """Test RBAC - unverified users should be blocked"""
+    # Get token for unverified user
+    data = {
+        "client_id": TEST_CLIENT_ID,
+        "username": "testuserUNV",
+        "password": TEST_PASSWORD,
+        "grant_type": "password"
+    }
+    
+    response = requests.post(
+        KEYCLOAK_TOKEN_URL,
+        data=data,
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
+    )
+    
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # Both should fail with 403 Forbidden
+    response = requests.get(f"{BASE_URL}/customers", headers=headers)
+    assert response.status_code == 403
+    
+    response = requests.get(f"{BASE_URL}/products", headers=headers)
+    assert response.status_code == 403
+
+
+def test_rbac_verified_user_access():
+    """Test RBAC - verified users should have access"""
+    # Get token for verified user
+    data = {
+        "client_id": TEST_CLIENT_ID,
+        "username": "testuser",
+        "password": TEST_PASSWORD,
+        "grant_type": "password"
+    }
+    
+    response = requests.post(
+        KEYCLOAK_TOKEN_URL,
+        data=data,
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
+    )
+    
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # Both should succeed
+    response = requests.get(f"{BASE_URL}/customers", headers=headers)
+    assert response.status_code == 200
+    
+    response = requests.get(f"{BASE_URL}/products", headers=headers)
+    assert response.status_code == 200
+
+
+def test_rbac_admin_full_access():
+    """Test RBAC - admin users should have full access"""
+    # Get token for admin user
+    data = {
+        "client_id": TEST_CLIENT_ID,
+        "username": "adminuser",
+        "password": "adminpass",
+        "grant_type": "password"
+    }
+    
+    response = requests.post(
+        KEYCLOAK_TOKEN_URL,
+        data=data,
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
+    )
+    
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # Both should succeed
+    response = requests.get(f"{BASE_URL}/customers", headers=headers)
+    assert response.status_code == 200
+    
+    response = requests.get(f"{BASE_URL}/products", headers=headers)
+    assert response.status_code == 200

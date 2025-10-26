@@ -21,51 +21,58 @@ app = FastAPI(
 customers_db = [
     Customer(
         id=1,
-        name="Test User",
-        email="test.user@example.com",
-        phone="+1234567890",
-        created_at=datetime.now()
-    ),
-    Customer(
-        id=2,
-        name="Admin User",
-        email="admin.user@example.com",
+        name="Test UserUNV",
+        email="test.userUNV@example.com",
         phone="+1234567891",
         created_at=datetime.now()
     ),
     Customer(
-        id=3,
-        name="Test UserCM",
-        email="test.userCM@example.com",
+        id=2,
+        name="Test User",
+        email="test.user@example.com",
         phone="+1234567892",
         created_at=datetime.now()
     ),
     Customer(
-        id=4,
-        name="Test UserPM",
-        email="test.userPM@example.com",
+        id=3,
+        name="Admin User",
+        email="admin.user@example.com",
         phone="+1234567893",
         created_at=datetime.now()
     ),
     Customer(
-        id=5,
-        name="Test UserPCM",
-        email="test.userPCM@example.com",
+        id=4,
+        name="Test UserCM",
+        email="test.userCM@example.com",
         phone="+1234567894",
         created_at=datetime.now()
     ),
     Customer(
-        id=6,
-        name="John Doe",
-        email="john.doe@example.com",
+        id=5,
+        name="Test UserPM",
+        email="test.userPM@example.com",
         phone="+1234567895",
         created_at=datetime.now()
     ),
     Customer(
+        id=6,
+        name="Test UserPCM",
+        email="test.userPCM@example.com",
+        phone="+1234567896",
+        created_at=datetime.now()
+    ),
+    Customer(
         id=7,
+        name="John Doe",
+        email="john.doe@example.com",
+        phone="+1234567897",
+        created_at=datetime.now()
+    ),
+    Customer(
+        id=8,
         name="Jane Smith",
         email="jane.smith@example.com",
-        phone="+1234567896",
+        phone="+1234567898",
         created_at=datetime.now()
     )
 ]

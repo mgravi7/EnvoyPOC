@@ -43,6 +43,7 @@ static_resources:
                   from_headers:
                   - name: Authorization
                     value_prefix: "Bearer "
+                  payload_in_metadata: verified_jwt
               rules:
               # Require JWT for customer service routes
               - match:
@@ -54,6 +55,76 @@ static_resources:
                   prefix: /products
                 requires:
                   provider_name: keycloak_provider
+          # RBAC Filter
+          - name: envoy.filters.http.rbac
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+              rules:
+                action: ALLOW
+                policies:
+                  "customer-service-access":
+                    permissions:
+                    - header:
+                        name: ":path"
+                        string_match:
+                          prefix: "/customers"
+                    principals:
+                    - or_ids:
+                        ids:
+                        - metadata:
+                            filter: envoy.filters.http.jwt_authn
+                            path:
+                            - key: verified_jwt
+                            - key: realm_access
+                            - key: roles
+                            value:
+                              list_match:
+                                one_of:
+                                  string_match:
+                                    exact: "user"
+                        - metadata:
+                            filter: envoy.filters.http.jwt_authn
+                            path:
+                            - key: verified_jwt
+                            - key: realm_access
+                            - key: roles
+                            value:
+                              list_match:
+                                one_of:
+                                  string_match:
+                                    exact: "admin"
+        
+                  "product-service-access":
+                    permissions:
+                    - header:
+                        name: ":path"
+                        string_match:
+                          prefix: "/products"
+                    principals:
+                    - or_ids:
+                        ids:
+                        - metadata:
+                            filter: envoy.filters.http.jwt_authn
+                            path:
+                            - key: verified_jwt
+                            - key: realm_access
+                            - key: roles
+                            value:
+                              list_match:
+                                one_of:
+                                  string_match:
+                                    exact: "user"
+                        - metadata:
+                            filter: envoy.filters.http.jwt_authn
+                            path:
+                            - key: verified_jwt
+                            - key: realm_access
+                            - key: roles
+                            value:
+                              list_match:
+                                one_of:
+                                  string_match:
+                                    exact: "admin"
           # Router filter (must be last)
           - name: envoy.filters.http.router
             typed_config:

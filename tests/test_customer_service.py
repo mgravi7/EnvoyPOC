@@ -62,7 +62,7 @@ class TestCustomerService:
         assert response.status_code == 200
         customers = response.json()
         assert isinstance(customers, list)
-        assert len(customers) >= 7  # We have 7 mock customers
+        assert len(customers) >= 8  # We have 8 mock customers
         
         # Check first customer structure
         customer = customers[0]
@@ -76,10 +76,10 @@ class TestCustomerService:
         token = get_access_token()
         headers = {"Authorization": f"Bearer {token}"}
         
-        response = requests.get(f"{GATEWAY_BASE_URL}/customers/6", headers=headers)
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers/7", headers=headers)
         assert response.status_code == 200
         customer = response.json()
-        assert customer["id"] == 6
+        assert customer["id"] == 7
         assert customer["name"] == "John Doe"
         assert customer["email"] == "john.doe@example.com"
     
@@ -98,6 +98,29 @@ class TestCustomerService:
         response = requests.get(f"{GATEWAY_BASE_URL}/customers")
         assert response.status_code == 401  # Unauthorized
 
+    def test_unverified_user_blocked_from_customers(self):
+        """Test that unverified users cannot access customer service"""
+        # Get token for testuserUNV (only has 'unverified-user' role)
+        data = {
+            "client_id": TEST_CLIENT_ID,
+            "username": "testuserUNV",
+            "password": TEST_PASSWORD,
+            "grant_type": "password"
+        }
+    
+        response = requests.post(
+            KEYCLOAK_TOKEN_URL,
+            data=data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+    
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+    
+        # Should get 403 Forbidden (RBAC blocks unverified users)
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers", headers=headers)
+        assert response.status_code == 403  # RBAC denial
 
 @pytest.fixture(scope="session", autouse=True)
 def wait_for_services():

@@ -92,8 +92,12 @@
   "roles": {
     "realm": [
       {
+        "name": "unverified-user",
+        "description": "Least access to resources"
+      },
+      {
         "name": "user",
-        "description": "Basic user role"
+        "description": "Basic user role (verified user)"
       },
       {
         "name": "admin",
@@ -106,10 +110,31 @@
       {
         "name": "product-manager",
         "description": "Can manage product data"
+      },
+      {
+        "name": "product-category-manager",
+        "description": "Can manage product data within a category"
       }
     ]
   },
   "users": [
+    {
+      "username": "testuserUNV",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "testuserUNV@example.com",
+      "firstName": "TestUNV",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpass",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [ "unverified-user" ],
+      "clientRoles": {}
+    },
     {
       "username": "testuser",
       "enabled": true,
@@ -141,7 +166,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": [ "user", "admin", "customer-manager", "product-manager" ],
+      "realmRoles": [ "user", "admin" ],
       "clientRoles": {}
     },
     {
@@ -197,7 +222,7 @@
     }
   ],
   "groups": [],
-  "defaultRoles": ["user"],
+  "defaultRoles": [ "unverified-user" ],
   "requiredCredentials": ["password"],
   "scopeMappings": [],
   "clientScopeMappings": {},
