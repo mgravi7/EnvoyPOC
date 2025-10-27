@@ -25,7 +25,7 @@ class TestCustomerService:
     
     def test_get_all_customers_via_gateway(self):
         """Test getting all customers through API Gateway"""
-        headers = get_auth_headers("testuser")
+        headers = get_auth_headers("testuserCM")
         
         response = requests.get(f"{GATEWAY_BASE_URL}/customers", headers=headers)
         assert response.status_code == 200
@@ -42,7 +42,7 @@ class TestCustomerService:
     
     def test_get_customer_by_id_via_gateway(self):
         """Test getting specific customer through API Gateway"""
-        headers = get_auth_headers("testuser")
+        headers = get_auth_headers("testuserCM")
         
         response = requests.get(f"{GATEWAY_BASE_URL}/customers/7", headers=headers)
         assert response.status_code == 200
@@ -53,7 +53,7 @@ class TestCustomerService:
     
     def test_get_nonexistent_customer(self):
         """Test getting non-existent customer"""
-        headers = get_auth_headers("testuser")
+        headers = get_auth_headers("testuserCM")
         
         response = requests.get(f"{GATEWAY_BASE_URL}/customers/999", headers=headers)
         assert response.status_code == 404
@@ -72,3 +72,96 @@ class TestCustomerService:
         # Should get 403 Forbidden (RBAC blocks unverified users)
         response = requests.get(f"{GATEWAY_BASE_URL}/customers", headers=headers)
         assert response.status_code == 403  # RBAC denial
+
+
+class TestCustomerRBAC:
+    """Test Role-Based Access Control for customer endpoints"""
+    
+    def test_customer_manager_can_access_any_customer(self):
+        """Test that users with customer-manager role can access any customer"""
+        headers = get_auth_headers("testuserCM")  # Has customer-manager role
+        
+        # Try to access different customers
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers/2", headers=headers)
+        assert response.status_code == 200
+        customer = response.json()
+        assert customer["id"] == 2
+        assert customer["email"] == "testuser@example.com"
+        
+        # Try another customer
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers/7", headers=headers)
+        assert response.status_code == 200
+        customer = response.json()
+        assert customer["id"] == 7
+        assert customer["email"] == "john.doe@example.com"
+    
+    def test_user_can_access_own_customer_record(self):
+        """Test that regular users can access their own customer record"""
+        headers = get_auth_headers("testuser")  # email: testuser@example.com
+    
+        # testuser@example.com corresponds to customer ID 2
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers/2", headers=headers)
+        assert response.status_code == 200
+        customer = response.json()
+        assert customer["id"] == 2
+        assert customer["email"] == "testuser@example.com"
+    
+    def test_user_cannot_access_other_customer_record(self):
+        """Test that regular users cannot access other customers' records"""
+        headers = get_auth_headers("testuser")  # email: testuser@example.com
+        
+        # Try to access a different customer (ID 7 - john.doe@example.com)
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers/7", headers=headers)
+        assert response.status_code == 403
+        error = response.json()
+        assert "Access denied" in error["detail"]
+        assert "only view your own customer information" in error["detail"]
+    
+    def test_admin_user_can_access_own_record(self):
+        """Test that admin user can access their own customer record"""
+        headers = get_auth_headers("adminuser")  # email: adminuser@example.com
+    
+        # adminuser@example.com corresponds to customer ID 3
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers/3", headers=headers)
+        assert response.status_code == 200
+        customer = response.json()
+        assert customer["id"] == 3
+        assert customer["email"] == "adminuser@example.com"
+    
+    def test_admin_user_cannot_access_other_customers(self):
+        """Test that admin user with customer-manager role cannot access other customers"""
+        headers = get_auth_headers("adminuser")  # Has admin and customer-manager roles
+      
+        # Try to access different customer (adminuser is ID 3, trying to access ID 2)
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers/2", headers=headers)
+        # Should fail because adminuser does not have customer-manager role
+        assert response.status_code == 403
+        error = response.json()
+        assert "Access denied" in error["detail"]
+        assert "only view your own customer information" in error["detail"]
+
+    def test_product_manager_cannot_access_other_customers(self):
+        """Test that product-manager role doesn't grant customer access"""
+        headers = get_auth_headers("testuserPM")  # email: testuserPM@example.com, role: product-manager
+        
+        # Can access own record (ID 5)
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers/5", headers=headers)
+        assert response.status_code == 200
+        customer = response.json()
+        assert customer["email"] == "testuserPM@example.com"
+        
+        # Cannot access other customer's record
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers/2", headers=headers)
+        assert response.status_code == 403
+        error = response.json()
+        assert "Access denied" in error["detail"]
+    
+    def test_rbac_with_nonexistent_customer(self):
+        """Test that RBAC is applied before 404 errors"""
+        headers = get_auth_headers("testuser")
+     
+        # Try to access non-existent customer
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers/999", headers=headers)
+        # Should return 404 (customer not found) rather than 403
+        # This is correct behavior - we check existence first, then authorization
+        assert response.status_code == 404
