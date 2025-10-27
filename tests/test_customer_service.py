@@ -24,8 +24,8 @@ class TestCustomerService:
         assert data["service"] == "customer-service"
     
     def test_get_all_customers_via_gateway(self):
-        """Test getting all customers through API Gateway"""
-        headers = get_auth_headers("testuserCM")
+        """Test getting all customers through API Gateway with customer-manager role"""
+        headers = get_auth_headers("testuserCM")  # Has customer-manager role
         
         response = requests.get(f"{GATEWAY_BASE_URL}/customers", headers=headers)
         assert response.status_code == 200
@@ -39,7 +39,7 @@ class TestCustomerService:
         assert "name" in customer
         assert "email" in customer
         assert "created_at" in customer
-    
+        
     def test_get_customer_by_id_via_gateway(self):
         """Test getting specific customer through API Gateway"""
         headers = get_auth_headers("testuserCM")
@@ -77,10 +77,58 @@ class TestCustomerService:
 class TestCustomerRBAC:
     """Test Role-Based Access Control for customer endpoints"""
     
+    def test_customer_manager_can_access_all_customers_list(self):
+        """Test that customer-manager can get all customers"""
+        headers = get_auth_headers("testuserCM")  # Has customer-manager role
+        
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers", headers=headers)
+        assert response.status_code == 200
+        customers = response.json()
+        assert len(customers) >= 8  # Should get all customers
+        
+        # Verify we get different customer emails
+        customer_emails = [c["email"] for c in customers]
+        assert "testuser@example.com" in customer_emails
+        assert "adminuser@example.com" in customer_emails
+        assert "john.doe@example.com" in customer_emails
+    
+    def test_regular_user_gets_only_own_customer_in_list(self):
+        """Test that regular users only get their own customer in the list"""
+        headers = get_auth_headers("testuser")  # email: testuser@example.com
+  
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers", headers=headers)
+        assert response.status_code == 200
+        customers = response.json()
+        assert len(customers) == 1  # Should only get their own record
+        assert customers[0]["email"] == "testuser@example.com"
+        assert customers[0]["id"] == 2
+
+    def test_admin_user_gets_own_customer_in_list(self):
+        """Test that admin user gets their own customer in the list"""
+        headers = get_auth_headers("adminuser")  # Has admin and customer-manager roles
+        
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers", headers=headers)
+        assert response.status_code == 200
+        customers = response.json()
+        assert len(customers) == 1  # Should get only their own record
+        assert customers[0]["email"] == "adminuser@example.com"
+        assert customers[0]["id"] == 3
+    
+    def test_product_manager_gets_only_own_customer_in_list(self):
+        """Test that product-manager only gets their own customer record"""
+        headers = get_auth_headers("testuserPM")  # email: testuserPM@example.com, role: product-manager
+        
+        response = requests.get(f"{GATEWAY_BASE_URL}/customers", headers=headers)
+        assert response.status_code == 200
+        customers = response.json()
+        assert len(customers) == 1  # Should only get their own record
+        assert customers[0]["email"] == "testuserPM@example.com"
+        assert customers[0]["id"] == 5
+
     def test_customer_manager_can_access_any_customer(self):
         """Test that users with customer-manager role can access any customer"""
         headers = get_auth_headers("testuserCM")  # Has customer-manager role
-        
+    
         # Try to access different customers
         response = requests.get(f"{GATEWAY_BASE_URL}/customers/2", headers=headers)
         assert response.status_code == 200

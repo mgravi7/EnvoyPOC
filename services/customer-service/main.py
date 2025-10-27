@@ -85,10 +85,29 @@ def health_check():
     return create_health_response("customer-service")
 
 @app.get("/customers", response_model=List[CustomerResponse])
-def get_customers():
-    """Get all customers"""
-    logger.info(f"Fetching all customers. Count: {len(customers_db)}")
-    return customers_db
+def get_customers(current_user: JWTPayload = Depends(get_current_user)):
+    """
+    Get customers based on user authorization
+    
+    Authorization:
+    - Users with 'customer-manager' role can retrieve all customers
+    - Other users can only retrieve their own customer record (email must match)
+    """
+    logger.info(f"Fetching customers (requested by: {current_user.email})")
+    
+    # Check authorization
+    # 1. If user has 'customer-manager' role, they can view all customers
+    if current_user.has_role("customer-manager"):
+        logger.info(f"Access granted: User {current_user.email} has customer-manager role - returning all customers")
+        logger.info(f"Returning all customers. Count: {len(customers_db)}")
+        return customers_db
+    
+    # 2. Otherwise, filter to only return the customer record that matches the user's email
+    user_customers = [c for c in customers_db if c.email.lower() == current_user.email.lower()]
+    
+    logger.info(f"Access restricted: User {current_user.email} can only see their own record - returning {len(user_customers)} customer(s)")
+    
+    return user_customers
 
 @app.get("/customers/{customer_id}", response_model=CustomerResponse)
 def get_customer(customer_id: int, current_user: JWTPayload = Depends(get_current_user)):
