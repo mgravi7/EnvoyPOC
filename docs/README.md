@@ -17,6 +17,9 @@ Complete documentation for the API Gateway Proof of Concept.
 - [Quick Reference](development/quick-reference.md) - Common commands and workflows
 - [Scripts Documentation](../scripts/README.md) - Utility scripts guide
 
+### Testing
+- [Test Utilities](test/test-utilities.md) - Tools for testing services
+
 ### API Documentation
 - [API Documentation](api/README.md) - Auto-generated API documentation for all services
 - [API Generation Guide](api/API_GENERATION_GUIDE.md) - How to generate API docs

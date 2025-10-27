@@ -198,6 +198,9 @@ openssl rand -base6432
 | testuserPM | testpass | user, product-manager |
 | testuserPCM | testpass | user, product-category-manager |
 
+**NOTE**: unverified-user means they have a login but haven't been verified to get any roles.
+This is separate from guest users who have no login at all.
+
 ## Useful Commands
 
 ### View All Service Logs
