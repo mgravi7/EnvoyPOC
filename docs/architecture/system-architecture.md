@@ -7,45 +7,44 @@ This document provides a high-level view of the API Gateway POC system architect
 ```mermaid
 graph TB
     %% External Users
-    User[?? Client/User - Web Browser, Mobile App, API Client]
- 
+    User[**Client/User** - Web Browser, Mobile App, API Client]
+    
     %% External Internet
-    Internet[?? Internet - External Network]
+    Internet[**Internet** - External Network]
     
     %% API Gateway Layer
-    subgraph "API Gateway Layer"
-        Envoy[?? Envoy Proxy - API Gateway - Port 8080 API - Port 9901 Admin - JWT Validation & Routing]
+    subgraph "**API Gateway Layer**"
+        Envoy[**Envoy** Proxy - API Gateway - Port 8080 API - Port 9901 Admin - JWT Validation & Routing]
     end
     
     %% Authentication Layer
-    subgraph "Identity & Access Management"
-        Keycloak[?? Keycloak - Identity Provider - Port 8180 - OAuth 2.0 / OpenID Connect - JWT Token Issuance]
+    subgraph "**Identity & Access Management**"
+        Keycloak[**Keycloak** - Identity Provider - Port 8180 - OAuth 2.0 / OpenID Connect - JWT Token Issuance]
     end
 
     %% Microservices Layer
-    subgraph "Microservices Layer"
-subgraph "Customer Domain"
-          CustomerAPI[?? Customer Service - FastAPI Application - Port 8001 - RBAC Authorization - Customer Data Management]
-          CustomerData[?? Customer Data Access - Mock Database Layer - Business Logic - Future: PostgreSQL]
-  end
-        
-        subgraph "Product Domain"
-         ProductAPI[?? Product Service - FastAPI Application - Port 8002 - Product Catalog - Category Management]
-      ProductData[?? Product Data Access - Mock Database Layer - Business Logic - Future: PostgreSQL]
-    end
+    subgraph "**Microservices Layer**"
+        subgraph "**Customer Domain**"
+            CustomerAPI[**Customer Service** - FastAPI Application - Port 8001 - RBAC Authorization - Customer Data Management]
+            CustomerData[**Customer Data Access** - Mock Database Layer - Business Logic - Future: PostgreSQL]
+        end      
+        subgraph "**Product Domain**"
+            ProductAPI[**Product Service** - FastAPI Application - Port 8002 - Product Catalog - Category Management]
+            ProductData[**Product Data Access** - Mock Database Layer - Business Logic - Future: PostgreSQL]
+        end
     end
     
     %% Shared Infrastructure
-    subgraph "Shared Infrastructure"
-        AuthModule[?? JWT Auth Module - shared/auth.py - Token Validation - User Context Extraction]
-  CommonUtils[??? Common Utilities - shared/common.py - Logging, Health Checks - Error Handling]
+    subgraph "**Shared Infrastructure**"
+        AuthModule[**JWT Auth Module** - shared/auth.py - Token Validation - User Context Extraction]
+        CommonUtils[**Common Utilities** - shared/common.py - Logging, Health Checks - Error Handling]
     end
     
     %% Network
-    subgraph "Container Network"
-        Network[?? Docker Bridge Network - microservices-network - Internal Service Discovery]
+    subgraph "**Container Network**"
+        Network[**Docker Bridge Network** - microservices-network - Internal Service Discovery]
     end
-  
+    
     %% Data Flow Connections
     User -->|HTTPS Requests with Bearer Token| Internet
     Internet -->|Port 8080| Envoy
@@ -58,7 +57,7 @@ subgraph "Customer Domain"
     Envoy -->|JWT Validation| Keycloak
     Envoy -->|/customers/* Authorized Requests| CustomerAPI
     Envoy -->|/products/* Authorized Requests| ProductAPI
-    
+
     %% Service Internal Flow
     CustomerAPI --> AuthModule
     CustomerAPI --> CustomerData
@@ -66,7 +65,7 @@ subgraph "Customer Domain"
     
     ProductAPI --> AuthModule
     ProductAPI --> ProductData
-  ProductAPI --> CommonUtils
+    ProductAPI --> CommonUtils
     
     %% Network Connections
     Envoy -.-> Network
@@ -83,7 +82,7 @@ subgraph "Customer Domain"
     %% Styling
     classDef gateway fill:#e1f5fe,stroke:#0277bd,stroke-width:3px
     classDef auth fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-classDef service fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef service fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     classDef data fill:#fff3e0,stroke:#f57c00,stroke-width:2px
     classDef shared fill:#fce4ec,stroke:#c2185b,stroke-width:2px
     classDef network fill:#f1f8e9,stroke:#558b2f,stroke-width:2px
@@ -93,14 +92,14 @@ classDef service fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     class Keycloak auth
     class CustomerAPI,ProductAPI service
     class CustomerData,ProductData data
- class AuthModule,CommonUtils shared
+    class AuthModule,CommonUtils shared
     class Network network
     class User,Internet external
 ```
 
 ## Component Details
 
-### ?? **Envoy API Gateway** 
+### **Envoy API Gateway** 
 - **Purpose**: Single entry point for all API requests
 - **Ports**: 
   - `8080` - Main API endpoint (public)
@@ -112,7 +111,7 @@ classDef service fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
   - Rate limiting and request/response transformation
 - **Technology**: Envoy Proxy v1.31
 
-### ?? **Keycloak Identity Provider**
+### **Keycloak Identity Provider**
 - **Purpose**: Centralized authentication and authorization
 - **Port**: `8180` - HTTP interface
 - **Responsibilities**:
@@ -123,7 +122,7 @@ classDef service fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
 - **Technology**: Keycloak 23.0
 - **Default Admin**: admin/admin (development only)
 
-### ?? **Customer Service**
+### **Customer Service**
 - **Purpose**: Customer data management with RBAC
 - **Port**: `8001` - FastAPI application
 - **Authorization Rules**:
@@ -132,14 +131,14 @@ classDef service fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
 - **Technology**: FastAPI 0.111.0 + Python 3.12
 - **Data Layer**: Mock data (future PostgreSQL)
 
-### ?? **Product Service**
+### **Product Service**
 - **Purpose**: Product catalog and category management
 - **Port**: `8002` - FastAPI application
 - **Authorization**: All users with `user` role (via Envoy)
 - **Technology**: FastAPI 0.111.0 + Python 3.12
 - **Data Layer**: Mock data (future PostgreSQL)
 
-### ?? **Shared Authentication Module**
+### **Shared Authentication Module**
 - **Location**: `services/shared/auth.py`
 - **Purpose**: JWT token decoding and user context extraction
 - **Features**:
@@ -147,7 +146,7 @@ classDef service fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
   - Role extraction from `realm_access.roles`
   - FastAPI dependency injection support
 
-### ??? **Common Utilities**
+### **Common Utilities**
 - **Location**: `services/shared/common.py`
 - **Purpose**: Shared functionality across services
 - **Features**:
@@ -188,28 +187,28 @@ classDef service fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
 3. **Product Service**: Basic access control (user role via Envoy)
 
 ### Security Features
-- ?? JWT signature validation
-- ??? Role-based access control (RBAC)
-- ?? Client secret authentication
-- ?? Comprehensive audit logging
-- ?? Request rate limiting (Envoy)
-- ?? Secure container networking
+- JWT signature validation
+- Role-based access control (RBAC)
+- Client secret authentication
+- Comprehensive audit logging
+- Request rate limiting (Envoy)
+- Secure container networking
 
 ## Data Flow Patterns
 
 ### Read Operations
 ```
-Client ? Envoy ? JWT Validation ? Service ? Data Layer ? Response
+Client -> Envoy -> JWT Validation -> Service -> Data Layer -> Response
 ```
 
 ### Authentication
 ```
-Client ? Keycloak ? JWT Token ? Client ? Envoy (validates) ? Service
+Client -> Keycloak -> JWT Token -> Client -> Envoy (validates) -> Service
 ```
 
 ### Authorization
 ```
-Envoy (Role Check) ? Service (Business Logic RBAC) ? Data Access
+Envoy (Role Check) -> Service (Business Logic RBAC) -> Data Access
 ```
 
 ## Future Enhancements
