@@ -1,12 +1,13 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, status
 from typing import List
-from datetime import datetime
 import os
 import sys
 sys.path.append('/app')
 
-from models.customer import Customer, CustomerCreate, CustomerResponse
+from models.customer import CustomerResponse
 from shared.common import setup_logging, create_health_response
+from shared.auth import get_current_user, JWTPayload
+from customer_data_access import customer_data_access
 
 # Setup logging
 logger = setup_logging("customer-service")
@@ -17,59 +18,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Mock data for now (will be replaced with database)
-customers_db = [
-    Customer(
-        id=1,
-        name="Test User",
-        email="test.user@example.com",
-        phone="+1234567890",
-        created_at=datetime.now()
-    ),
-    Customer(
-        id=2,
-        name="Admin User",
-        email="admin.user@example.com",
-        phone="+1234567891",
-        created_at=datetime.now()
-    ),
-    Customer(
-        id=3,
-        name="Test UserCM",
-        email="test.userCM@example.com",
-        phone="+1234567892",
-        created_at=datetime.now()
-    ),
-    Customer(
-        id=4,
-        name="Test UserPM",
-        email="test.userPM@example.com",
-        phone="+1234567893",
-        created_at=datetime.now()
-    ),
-    Customer(
-        id=5,
-        name="Test UserPCM",
-        email="test.userPCM@example.com",
-        phone="+1234567894",
-        created_at=datetime.now()
-    ),
-    Customer(
-        id=6,
-        name="John Doe",
-        email="john.doe@example.com",
-        phone="+1234567895",
-        created_at=datetime.now()
-    ),
-    Customer(
-        id=7,
-        name="Jane Smith",
-        email="jane.smith@example.com",
-        phone="+1234567896",
-        created_at=datetime.now()
-    )
-]
-
 @app.get("/customers/health")
 def health_check():
     """Health check endpoint"""
@@ -77,20 +25,68 @@ def health_check():
     return create_health_response("customer-service")
 
 @app.get("/customers", response_model=List[CustomerResponse])
-def get_customers():
-    """Get all customers"""
-    logger.info(f"Fetching all customers. Count: {len(customers_db)}")
-    return customers_db
+def get_customers(current_user: JWTPayload = Depends(get_current_user)):
+    """
+    Get customers based on user authorization
+    
+    Authorization:
+    - Users with 'customer-manager' role can retrieve all customers
+    - Other users can only retrieve their own customer record (email must match)
+    """
+    logger.info(f"Fetching customers (requested by: {current_user.email})")
+    
+    # Check authorization
+    # 1. If user has 'customer-manager' role, they can view all customers
+    if current_user.has_role("customer-manager"):
+        customers = customer_data_access.get_all_customers()
+        logger.info(f"Access granted: User {current_user.email} has customer-manager role - returning all customers")
+        logger.info(f"Returning all customers. Count: {customer_data_access.get_customer_count()}")
+        return customers
+    
+    # 2. Otherwise, filter to only return the customer record that matches the user's email
+    user_customers = customer_data_access.get_customers_by_email(current_user.email)
+    
+    logger.info(f"Access restricted: User {current_user.email} can only see their own record - returning {len(user_customers)} customer(s)")
+    
+    return user_customers
 
 @app.get("/customers/{customer_id}", response_model=CustomerResponse)
-def get_customer(customer_id: int):
-    """Get a specific customer by ID"""
-    logger.info(f"Fetching customer with ID: {customer_id}")
-    customer = next((c for c in customers_db if c.id == customer_id), None)
+def get_customer(customer_id: int, current_user: JWTPayload = Depends(get_current_user)):
+    """
+    Get a specific customer by ID
+    
+    Authorization:
+    - Users with 'customer-manager' role can retrieve any customer
+    - Other users can only retrieve their own customer record (email must match)
+    """
+    logger.info(f"Fetching customer with ID: {customer_id} (requested by: {current_user.email})")
+    
+    # Find the customer using data access layer
+    customer = customer_data_access.get_customer_by_id(customer_id)
     if not customer:
         logger.warning(f"Customer not found with ID: {customer_id}")
         raise HTTPException(status_code=404, detail="Customer not found")
-    return customer
+    
+    # Check authorization
+    # 1. If user has 'customer-manager' role, they can view any customer
+    if current_user.has_role("customer-manager"):
+        logger.info(f"Access granted: User {current_user.email} has customer-manager role")
+        return customer
+    
+    # 2. Otherwise, check if the customer email matches the user's email
+    if customer.email.lower() == current_user.email.lower():
+        logger.info(f"Access granted: User {current_user.email} accessing their own record")
+        return customer
+ 
+    # 3. Deny access - user is not a customer-manager and email doesn't match
+    logger.warning(
+        f"Access denied: User {current_user.email} attempted to access customer {customer_id} "
+        f"(customer email: {customer.email})"
+    )
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Access denied: You can only view your own customer information"
+    )
 
 if __name__ == "__main__":
     import uvicorn

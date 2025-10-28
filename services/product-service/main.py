@@ -1,13 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from typing import List
-from datetime import datetime
-from decimal import Decimal
 import os
 import sys
 sys.path.append('/app')
 
-from models.product import Product, ProductCreate, ProductResponse
+from models.product import ProductResponse
 from shared.common import setup_logging, create_health_response
+from product_data_access import product_data_access
 
 # Setup logging
 logger = setup_logging("product-service")
@@ -18,37 +17,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Mock data for now (will be replaced with database)
-products_db = [
-    Product(
-        id=1,
-        name="Laptop",
-        description="High-performance laptop for professionals",
-        price=Decimal("999.99"),
-        category="Electronics",
-        stock_quantity=50,
-        created_at=datetime.now()
-    ),
-    Product(
-        id=2,
-        name="Smartphone",
-        description="Latest smartphone with advanced features",
-        price=Decimal("699.99"),
-        category="Electronics",
-        stock_quantity=100,
-        created_at=datetime.now()
-    ),
-    Product(
-        id=3,
-        name="Coffee Maker",
-        description="Automatic coffee maker with timer",
-        price=Decimal("89.99"),
-        category="Appliances",
-        stock_quantity=25,
-        created_at=datetime.now()
-    )
-]
-
 @app.get("/products/health")
 def health_check():
     """Health check endpoint"""
@@ -57,26 +25,48 @@ def health_check():
 
 @app.get("/products", response_model=List[ProductResponse])
 def get_products():
-    """Get all products"""
-    logger.info(f"Fetching all products. Count: {len(products_db)}")
-    return products_db
+    """
+    Get all products
+    
+    Note: Authorization handled by Envoy Gateway (requires 'user' role)
+    """
+    logger.info("Fetching all products")
+    
+    products = product_data_access.get_all_products()
+    logger.info(f"Returning all products. Count: {product_data_access.get_product_count()}")
+    
+    return products
 
 @app.get("/products/{product_id}", response_model=ProductResponse)
 def get_product(product_id: int):
-    """Get a specific product by ID"""
+    """
+    Get a specific product by ID
+    
+    Note: Authorization handled by Envoy Gateway (requires 'user' role)
+    """
     logger.info(f"Fetching product with ID: {product_id}")
-    product = next((p for p in products_db if p.id == product_id), None)
+    
+    # Find the product using data access layer
+    product = product_data_access.get_product_by_id(product_id)
     if not product:
         logger.warning(f"Product not found with ID: {product_id}")
         raise HTTPException(status_code=404, detail="Product not found")
+    
+    logger.info(f"Successfully retrieved product: {product.name}")
     return product
 
-@app.get("/products/category/{category}")
+@app.get("/products/category/{category}", response_model=List[ProductResponse])
 def get_products_by_category(category: str):
-    """Get products by category"""
+    """
+    Get products by category
+    
+    Note: Authorization handled by Envoy Gateway (requires 'user' role)
+    """
     logger.info(f"Fetching products by category: {category}")
-    filtered_products = [p for p in products_db if p.category.lower() == category.lower()]
+    
+    filtered_products = product_data_access.get_products_by_category(category)
     logger.info(f"Found {len(filtered_products)} products in category: {category}")
+    
     return filtered_products
 
 if __name__ == "__main__":
