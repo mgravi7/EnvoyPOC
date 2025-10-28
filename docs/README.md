@@ -27,7 +27,8 @@ Complete documentation for the API Gateway Proof of Concept.
 - [Product Service API](api/product-service.md) - Product service endpoints
 
 ### Architecture
-Documentation for system architecture (coming soon)
+- [System Architecture](architecture/system-architecture.md) - Complete system overview
+- [Authentication & Authorization Flow](architecture/authentication-authorization-flow.md) - Security flow diagrams
 
 ### Operations
 Documentation for deployment and operations (coming soon)

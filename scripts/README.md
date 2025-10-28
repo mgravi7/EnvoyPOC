@@ -476,7 +476,7 @@ When adding new scripts:
 
 1. **Create script file:**
    ```bash
- touch scripts/my-new-script.sh
+   touch scripts/my-new-script.sh
    chmod +x scripts/my-new-script.sh
    ```
 
@@ -514,5 +514,5 @@ When contributing scripts:
 
 ---
 
-*Last updated: [Current Date]*
+*Last updated: 27 October, 2025*
 *Maintained by: Development Team*

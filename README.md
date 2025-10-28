@@ -126,37 +126,38 @@ APIGatewayPOC/
 ├── docker-compose.yml    # Service orchestration
 ├── .env.example          # Environment variables template
 │
-├── docs/        # Documentation
-│   ├── README.md     # Documentation index
-│   ├── setup/        # Installation and setup guides
-│   ├── security/     # Security documentation
-│   ├── development/ # Developer guides
-│   └── api/   # Auto-generated API documentation
+├── docs/                 # Documentation
+│   ├── README.md         # Documentation index
+│   ├── setup/            # Installation and setup guides
+│   ├── security/         # Security documentation
+│   ├── development/      # Developer guides
+│   ├── api/              # Auto-generated API documentation
+│   └── architecture/     # Architecture documentation
 │
 ├── reports/     # Status and verification reports
-│ ├── project-status.md        # Current project status
+│   ├── project-status.md        # Current project status
 │   └── verification-report.md   # Validation results
 │
-├── services/    # Microservices
-│   ├── gateway/   # Envoy API Gateway
-│   ├── keycloak/    # Keycloak IAM
-│   ├── customer-service/        # Customer API
-│   ├── product-service/     # Product API
-│   └── shared/        # Shared utilities
+├── services/   # Microservices
+│ ├── gateway/            # Envoy API Gateway
+│   ├── keycloak/         # Keycloak IAM
+│   ├── customer-service/ # Customer API
+│   ├── product-service/  # Product API
+│   └── shared/           # Shared utilities
 │
-├── tests/       # All tests
-│   ├── test_customer_service.py  # Unit tests for Customer service
-│   ├── test_product_service.py   # Unit tests for Product service
-│   └── integration/       # Integration test suites
+├── tests/# All tests
+│   ├── test_customer_service.py  # Integration tests for Customer service
+│   ├── test_product_service.py   # Integration tests for Product service
+│   └── integration/              # Integration test suites
 │
-└── scripts/     # Utility scripts
-    ├── validate_project.py     # Project validation tool
-    ├── generate-api-docs.py    # API documentation generator
-    ├── rotate-secrets.sh       # Secret rotation (Bash)
-    ├── rotate-secrets.ps1      # Secret rotation (PowerShell)
-├── start.sh            # Start services
-    ├── stop.sh                 # Stop services
-    └── test.sh   # Run tests
+└── scripts/  # Utility scripts
+    ├── validate_project.py      # Project validation tool
+    ├── generate-api-docs.py     # API documentation generator
+    ├── rotate-secrets.sh        # Secret rotation (Bash)
+    ├── rotate-secrets.ps1       # Secret rotation (PowerShell)
+    ├── start.sh                 # Start services
+    ├── stop.sh                  # Stop services
+    └── test.sh                  # Run tests
 ```
 
 ## Technology Stack
