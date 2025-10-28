@@ -1,13 +1,13 @@
 from fastapi import FastAPI, HTTPException, Depends, status
 from typing import List
-from datetime import datetime
 import os
 import sys
 sys.path.append('/app')
 
-from models.customer import Customer, CustomerCreate, CustomerResponse
+from models.customer import CustomerResponse
 from shared.common import setup_logging, create_health_response
 from shared.auth import get_current_user, JWTPayload
+from customer_data_access import customer_data_access
 
 # Setup logging
 logger = setup_logging("customer-service")
@@ -17,66 +17,6 @@ app = FastAPI(
     description="Microservice for managing customers",
     version="1.0.0"
 )
-
-# Mock data for now (will be replaced with database)
-customers_db = [
-    Customer(
-        id=1,
-        name="Test UserUNV",
-        email="testuserUNV@example.com",
-        phone="+1234567891",
-        created_at=datetime.now()
-    ),
-    Customer(
-        id=2,
-        name="Test User",
-        email="testuser@example.com",
-        phone="+1234567892",
-        created_at=datetime.now()
-    ),
-    Customer(
-        id=3,
-        name="Admin User",
-        email="adminuser@example.com",
-        phone="+1234567893",
-        created_at=datetime.now()
-    ),
-    Customer(
-        id=4,
-        name="Test UserCM",
-        email="testuserCM@example.com",
-        phone="+1234567894",
-        created_at=datetime.now()
-    ),
-    Customer(
-        id=5,
-        name="Test UserPM",
-        email="testuserPM@example.com",
-        phone="+1234567895",
-        created_at=datetime.now()
-    ),
-    Customer(
-        id=6,
-        name="Test UserPCM",
-        email="testuserPCM@example.com",
-        phone="+1234567896",
-        created_at=datetime.now()
-    ),
-    Customer(
-        id=7,
-        name="John Doe",
-        email="john.doe@example.com",
-        phone="+1234567897",
-        created_at=datetime.now()
-    ),
-    Customer(
-        id=8,
-        name="Jane Smith",
-        email="jane.smith@example.com",
-        phone="+1234567898",
-        created_at=datetime.now()
-    )
-]
 
 @app.get("/customers/health")
 def health_check():
@@ -98,12 +38,13 @@ def get_customers(current_user: JWTPayload = Depends(get_current_user)):
     # Check authorization
     # 1. If user has 'customer-manager' role, they can view all customers
     if current_user.has_role("customer-manager"):
+        customers = customer_data_access.get_all_customers()
         logger.info(f"Access granted: User {current_user.email} has customer-manager role - returning all customers")
-        logger.info(f"Returning all customers. Count: {len(customers_db)}")
-        return customers_db
+        logger.info(f"Returning all customers. Count: {customer_data_access.get_customer_count()}")
+        return customers
     
     # 2. Otherwise, filter to only return the customer record that matches the user's email
-    user_customers = [c for c in customers_db if c.email.lower() == current_user.email.lower()]
+    user_customers = customer_data_access.get_customers_by_email(current_user.email)
     
     logger.info(f"Access restricted: User {current_user.email} can only see their own record - returning {len(user_customers)} customer(s)")
     
@@ -120,8 +61,8 @@ def get_customer(customer_id: int, current_user: JWTPayload = Depends(get_curren
     """
     logger.info(f"Fetching customer with ID: {customer_id} (requested by: {current_user.email})")
     
-    # Find the customer
-    customer = next((c for c in customers_db if c.id == customer_id), None)
+    # Find the customer using data access layer
+    customer = customer_data_access.get_customer_by_id(customer_id)
     if not customer:
         logger.warning(f"Customer not found with ID: {customer_id}")
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -139,8 +80,8 @@ def get_customer(customer_id: int, current_user: JWTPayload = Depends(get_curren
  
     # 3. Deny access - user is not a customer-manager and email doesn't match
     logger.warning(
-     f"Access denied: User {current_user.email} attempted to access customer {customer_id} "
-     f"(customer email: {customer.email})"
+        f"Access denied: User {current_user.email} attempted to access customer {customer_id} "
+        f"(customer email: {customer.email})"
     )
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
