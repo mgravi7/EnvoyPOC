@@ -107,9 +107,9 @@ curl -v http://localhost:8080/customers
 ```
 **Expected:**401 Unauthorized - Jwt is missing
 
-### 2. Access With Valid Token (Should Succeed)
+### 2A. Access With Valid Token (Should Succeed) - LINUX
 ```bash
-# First, get the token and extract it
+# First, get the token using curl
 TOKEN=$(curl -s -X POST http://localhost:8180/realms/api-gateway-poc/protocol/openid-connect/token \
  -H "Content-Type: application/x-www-form-urlencoded" \
  -d "client_id=test-client" \
@@ -119,6 +119,23 @@ TOKEN=$(curl -s -X POST http://localhost:8180/realms/api-gateway-poc/protocol/op
 
 # Use the token to access protected endpoints
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/customers
+```
+### 2B. Access With Valid Token (Should Succeed) - Powershell
+```bash
+# Get token using PowerShell (no jq needed)
+$response = Invoke-RestMethod -Uri "http://localhost:8180/realms/api-gateway-poc/protocol/openid-connect/token" `
+  -Method POST `
+  -ContentType "application/x-www-form-urlencoded" `
+  -Body @{
+    client_id = "test-client"
+    username = "testuser"
+    password = "testpass"
+    grant_type = "password"
+  }
+$TOKEN = $response.access_token
+
+# Use the token to access protected endpoints
+Invoke-RestMethod -Uri "http://localhost:8080/customers" -Headers @{Authorization = "Bearer $TOKEN"}
 ```
 
 ### 3. Test Product Service
