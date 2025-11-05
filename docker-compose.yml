@@ -23,6 +23,29 @@ services:
     networks:
       - microservices-network
 
+  # Authorization Service
+  authz-service:
+    build:
+      context: ./services/authz-service
+      dockerfile: Dockerfile
+    container_name: authz-service
+    environment:
+      - SERVICE_PORT=9000
+      - LOG_LEVEL=INFO
+      - SERVICE_NAME=authz-service
+    networks:
+      - microservices-network
+    # NO ports exposed - internal network only for security
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/authz/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
   # API Gateway (Envoy)
   gateway:
     build:
@@ -31,7 +54,15 @@ services:
     ports:
       - "8080:8080"
       - "9901:9901"  # Envoy admin interface
-    # TO DO: introduce depends_on to ensure Keycloak starts first
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      authz-service:
+        condition: service_healthy
+      customer-service:
+        condition: service_started
+      product-service:
+        condition: service_started
     networks:
       - microservices-network
 

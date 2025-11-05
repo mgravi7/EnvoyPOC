@@ -55,6 +55,29 @@ static_resources:
                   prefix: /products
                 requires:
                   provider_name: keycloak_provider
+          
+          # External Authorization Filter - Role Lookup
+          - name: envoy.filters.http.ext_authz
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+              http_service:
+                server_uri:
+                  uri: http://authz-service:9000
+                  cluster: authz_service_cluster
+                  timeout: 1s
+                path_prefix: /authz/roles
+                authorization_request:
+                  allowed_headers:
+                    patterns:
+                    - exact: authorization
+                    - exact: x-request-id
+                authorization_response:
+                  allowed_upstream_headers:
+                    patterns:
+                    - exact: x-user-email
+                    - exact: x-user-roles
+              failure_mode_allow: false
+          
           # RBAC Filter
           - name: envoy.filters.http.rbac
             typed_config:
@@ -71,28 +94,14 @@ static_resources:
                     principals:
                     - or_ids:
                         ids:
-                        - metadata:
-                            filter: envoy.filters.http.jwt_authn
-                            path:
-                            - key: verified_jwt
-                            - key: realm_access
-                            - key: roles
-                            value:
-                              list_match:
-                                one_of:
-                                  string_match:
-                                    exact: "user"
-                        - metadata:
-                            filter: envoy.filters.http.jwt_authn
-                            path:
-                            - key: verified_jwt
-                            - key: realm_access
-                            - key: roles
-                            value:
-                              list_match:
-                                one_of:
-                                  string_match:
-                                    exact: "admin"
+                        - header:
+                            name: "x-user-roles"
+                            string_match:
+                              contains: "user"
+                        - header:
+                            name: "x-user-roles"
+                            string_match:
+                              contains: "admin"
         
                   "product-service-access":
                     permissions:
@@ -103,28 +112,14 @@ static_resources:
                     principals:
                     - or_ids:
                         ids:
-                        - metadata:
-                            filter: envoy.filters.http.jwt_authn
-                            path:
-                            - key: verified_jwt
-                            - key: realm_access
-                            - key: roles
-                            value:
-                              list_match:
-                                one_of:
-                                  string_match:
-                                    exact: "user"
-                        - metadata:
-                            filter: envoy.filters.http.jwt_authn
-                            path:
-                            - key: verified_jwt
-                            - key: realm_access
-                            - key: roles
-                            value:
-                              list_match:
-                                one_of:
-                                  string_match:
-                                    exact: "admin"
+                        - header:
+                            name: "x-user-roles"
+                            string_match:
+                              contains: "user"
+                        - header:
+                            name: "x-user-roles"
+                            string_match:
+                              contains: "admin"
           # Router filter (must be last)
           - name: envoy.filters.http.router
             typed_config:
@@ -169,6 +164,28 @@ static_resources:
               socket_address:
                 address: keycloak
                 port_value: 8080
+
+  - name: authz_service_cluster
+    connect_timeout: 1s
+    type: LOGICAL_DNS
+    dns_lookup_family: V4_ONLY
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: authz_service_cluster
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: authz-service
+                port_value: 9000
+    health_checks:
+    - timeout: 1s
+      interval: 10s
+      unhealthy_threshold: 2
+      healthy_threshold: 2
+      http_health_check:
+        path: /authz/health
 
   - name: customer_service
     connect_timeout: 30s
