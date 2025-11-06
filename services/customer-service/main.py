@@ -6,7 +6,7 @@ sys.path.append('/app')
 
 from models.customer import CustomerResponse
 from shared.common import setup_logging, create_health_response
-from shared.auth import get_current_user, JWTPayload
+from shared.auth import get_current_user_from_headers, JWTPayload
 from customer_data_access import customer_data_access
 
 # Setup logging
@@ -25,13 +25,15 @@ def health_check():
     return create_health_response("customer-service")
 
 @app.get("/customers", response_model=List[CustomerResponse])
-def get_customers(current_user: JWTPayload = Depends(get_current_user)):
+def get_customers(current_user: JWTPayload = Depends(get_current_user_from_headers)):
     """
     Get customers based on user authorization
     
     Authorization:
     - Users with 'customer-manager' role can retrieve all customers
     - Other users can only retrieve their own customer record (email must match)
+    
+    Note: Roles are provided by authz-service via X-User-Roles header (set by Envoy)
     """
     logger.info(f"Fetching customers (requested by: {current_user.email})")
     
@@ -51,13 +53,15 @@ def get_customers(current_user: JWTPayload = Depends(get_current_user)):
     return user_customers
 
 @app.get("/customers/{customer_id}", response_model=CustomerResponse)
-def get_customer(customer_id: int, current_user: JWTPayload = Depends(get_current_user)):
+def get_customer(customer_id: int, current_user: JWTPayload = Depends(get_current_user_from_headers)):
     """
     Get a specific customer by ID
     
     Authorization:
     - Users with 'customer-manager' role can retrieve any customer
     - Other users can only retrieve their own customer record (email must match)
+    
+    Note: Roles are provided by authz-service via X-User-Roles header (set by Envoy)
     """
     logger.info(f"Fetching customer with ID: {customer_id} (requested by: {current_user.email})")
     

@@ -1,6 +1,7 @@
 """
 Integration tests for Customer Service
 """
+from urllib import response
 import pytest
 import requests
 # conftest.py functions and constants are automatically available
@@ -65,21 +66,29 @@ class TestCustomerService:
         response = requests.get(f"{GATEWAY_BASE_URL}/customers")
         assert response.status_code == 401  # Unauthorized
 
-    def test_unverified_user_blocked_from_customers(self):
-        """Test that unverified users cannot access customer service"""
+    def test_unverified_user_access_self_from_customers(self):
+        """Test that unverified users can access only their own customer record"""
         headers = get_auth_headers("testuser-unvrfd")
         
-        # Should get 403 Forbidden (RBAC blocks unverified users)
+        # Should get only their own customer record
         response = requests.get(f"{GATEWAY_BASE_URL}/customers", headers=headers)
-        assert response.status_code == 403  # RBAC denial
+        assert response.status_code == 200
+        customers = response.json()
+        assert len(customers) == 1  # Should only get their own record
+        assert customers[0]["email"] == "test.user-unvrfd@example.com"
+        assert customers[0]["id"] == 1
 
-    def test_verified_user_blocked_from_customers(self):
-        """Test that verified users cannot access customer service"""
+    def test_verified_user_access_self_from_customers(self):
+        """Test that verified users can access only their own customer record"""
         headers = get_auth_headers("testuser-vrfd")
         
-        # Should get 403 Forbidden (RBAC blocks verified users)
+        # Should get only their own customer record
         response = requests.get(f"{GATEWAY_BASE_URL}/customers", headers=headers)
-        assert response.status_code == 403  # RBAC denial
+        assert response.status_code == 200
+        customers = response.json()
+        assert len(customers) == 1  # Should only get their own record
+        assert customers[0]["email"] == "test.user-vrfd@example.com"
+        assert customers[0]["id"] == 2
 
 
 class TestCustomerRBAC:

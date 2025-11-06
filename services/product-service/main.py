@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from typing import List
 import os
 import sys
@@ -6,6 +6,7 @@ sys.path.append('/app')
 
 from models.product import ProductResponse
 from shared.common import setup_logging, create_health_response
+from shared.auth import get_current_user_from_headers, JWTPayload
 from product_data_access import product_data_access
 
 # Setup logging
@@ -24,13 +25,15 @@ def health_check():
     return create_health_response("product-service")
 
 @app.get("/products", response_model=List[ProductResponse])
-def get_products():
+def get_products(current_user: JWTPayload = Depends(get_current_user_from_headers)):
     """
     Get all products
     
-    Note: Authorization handled by Envoy Gateway (requires 'user' role)
+    Note: Gateway-level authorization handled by Envoy (requires 'user' or 'admin' role).
+    User information available for logging and future fine-grained authorization.
+    Roles are provided by authz-service via X-User-Roles header (set by Envoy).
     """
-    logger.info("Fetching all products")
+    logger.info(f"Fetching all products (requested by: {current_user.email}, roles: {current_user.roles})")
     
     products = product_data_access.get_all_products()
     logger.info(f"Returning all products. Count: {product_data_access.get_product_count()}")
@@ -38,13 +41,15 @@ def get_products():
     return products
 
 @app.get("/products/{product_id}", response_model=ProductResponse)
-def get_product(product_id: int):
+def get_product(product_id: int, current_user: JWTPayload = Depends(get_current_user_from_headers)):
     """
     Get a specific product by ID
     
-    Note: Authorization handled by Envoy Gateway (requires 'user' role)
+    Note: Gateway-level authorization handled by Envoy (requires 'user' or 'admin' role).
+    User information available for logging and future fine-grained authorization.
+    Roles are provided by authz-service via X-User-Roles header (set by Envoy).
     """
-    logger.info(f"Fetching product with ID: {product_id}")
+    logger.info(f"Fetching product with ID: {product_id} (requested by: {current_user.email})")
     
     # Find the product using data access layer
     product = product_data_access.get_product_by_id(product_id)
@@ -56,13 +61,15 @@ def get_product(product_id: int):
     return product
 
 @app.get("/products/category/{category}", response_model=List[ProductResponse])
-def get_products_by_category(category: str):
+def get_products_by_category(category: str, current_user: JWTPayload = Depends(get_current_user_from_headers)):
     """
     Get products by category
     
-    Note: Authorization handled by Envoy Gateway (requires 'user' role)
+    Note: Gateway-level authorization handled by Envoy (requires 'user' or 'admin' role).
+    User information available for logging and future fine-grained authorization.
+    Roles are provided by authz-service via X-User-Roles header (set by Envoy).
     """
-    logger.info(f"Fetching products by category: {category}")
+    logger.info(f"Fetching products by category: {category} (requested by: {current_user.email})")
     
     filtered_products = product_data_access.get_products_by_category(category)
     logger.info(f"Found {len(filtered_products)} products in category: {category}")

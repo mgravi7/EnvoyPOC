@@ -98,21 +98,32 @@ def health_check():
     }
 
 
-@app.post("/authz/roles")
-async def get_user_roles_endpoint(request: Request):
+@app.api_route("/authz/roles", methods=["GET", "POST"])
+@app.api_route("/authz/roles/{path:path}", methods=["GET", "POST"])
+async def get_user_roles_endpoint(request: Request, path: Optional[str] = None):
     """
     Role lookup endpoint called by Envoy ext_authz filter.
+    
+    Accepts both GET and POST methods (Envoy may use either depending on original request).
+    Accepts both /authz/roles and /authz/roles/* paths.
+    The path suffix (e.g., /customers, /products) is ignored and can be used
+    for logging/debugging purposes. This allows Envoy's path_prefix to work
+    correctly with ext_authz filter.
     
     Extracts user email from JWT token and returns roles in response headers.
     This endpoint is only called by Envoy after JWT validation.
     
     Request Headers:
-        Authorization: Bearer <jwt-token> (validated by Envoy)
-        X-Request-Id: <uuid> (optional, for request tracing)
+        authorization: Bearer <jwt-token> (validated by Envoy)
+        x-request-id: <uuid> (optional, for request tracing)
     
-    Response Headers (200 OK):
-        X-User-Email: user@example.com
-        X-User-Roles: user,customer-manager (comma-separated)
+    Response Headers (200 OK, HTTP/2 lowercase):
+        x-user-email: user@example.com
+        x-user-roles: user,customer-manager (comma-separated)
+    
+    Args:
+        path: Optional path suffix from original request (e.g., "customers", "products")
+              This is ignored but logged for debugging.
     
     Returns:
         200 OK: User found, roles returned in headers
@@ -123,7 +134,11 @@ async def get_user_roles_endpoint(request: Request):
     # Extract request ID for logging correlation
     request_id = request.headers.get("x-request-id", "unknown")
     
-    logger.info(f"[{request_id}] AuthZ role lookup request received")
+    # Log the original request path for debugging
+    if path:
+        logger.info(f"[{request_id}] AuthZ role lookup request ({request.method}) for path: /{path}")
+    else:
+        logger.info(f"[{request_id}] AuthZ role lookup request ({request.method}) received")
     
     try:
         # Extract and validate Authorization header
@@ -159,12 +174,13 @@ async def get_user_roles_endpoint(request: Request):
         
         # Return success with roles in headers
         # Envoy will forward these headers to downstream services
+        # Note: HTTP/2 headers must be lowercase
         return Response(
             status_code=200,
             content="",  # Empty body
             headers={
-                "X-User-Email": email,
-                "X-User-Roles": roles_str
+                "x-user-email": email,
+                "x-user-roles": roles_str
             }
         )
     

@@ -101,8 +101,15 @@ static_resources:
                         - header:
                             name: "x-user-roles"
                             string_match:
-                              contains: "admin"
-        
+                              contains: "customer-manager"
+                        - header:
+                            name: "x-user-roles"
+                            string_match:
+                              contains: "unverified-user"
+                        - header:
+                            name: "x-user-roles"
+                            string_match:
+                              contains: "verified-user"
                   "product-service-access":
                     permissions:
                     - header:
@@ -119,7 +126,7 @@ static_resources:
                         - header:
                             name: "x-user-roles"
                             string_match:
-                              contains: "admin"
+                              contains: "product-manager"
           # Router filter (must be last)
           - name: envoy.filters.http.router
             typed_config:
@@ -181,7 +188,7 @@ static_resources:
                 port_value: 9000
     health_checks:
     - timeout: 1s
-      interval: 10s
+      interval: 30s
       unhealthy_threshold: 2
       healthy_threshold: 2
       http_health_check:

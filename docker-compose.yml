@@ -42,9 +42,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    depends_on:
-      keycloak:
-        condition: service_healthy
+    # depends_on removed
 
   # API Gateway (Envoy)
   gateway:
@@ -54,15 +52,7 @@ services:
     ports:
       - "8080:8080"
       - "9901:9901"  # Envoy admin interface
-    depends_on:
-      keycloak:
-        condition: service_healthy
-      authz-service:
-        condition: service_healthy
-      customer-service:
-        condition: service_started
-      product-service:
-        condition: service_started
+    # depends_on removed
     networks:
       - microservices-network
 
