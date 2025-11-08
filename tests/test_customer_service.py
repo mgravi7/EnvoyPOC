@@ -1,7 +1,6 @@
 """
 Integration tests for Customer Service
 """
-from urllib import response
 import pytest
 import requests
 # conftest.py functions and constants are automatically available
