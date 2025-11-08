@@ -140,7 +140,7 @@ def test_role_based_access_control():
     # Should succeed (testuser has 'user' role from authz service)
     assert response.status_code == 200
     
-    # Access product service (r'user' role has access)
+    # Access product service ('user' role has access)
     response = requests.get(
         "http://localhost:8080/products",
         headers={"Authorization": f"Bearer {token}"}
