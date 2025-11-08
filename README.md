@@ -16,23 +16,30 @@ A proof-of-concept microservices application demonstrating API Gateway patterns 
 ┌─────────────────────────────────────────────┐
 │          API Gateway (Envoy)                │
 │     Port 8080 (API) | Port 9901 (Admin)     │
-│          + JWT Authentication               │
-└──────────────────┬──────────────────────────┘
-                   │
-        ┌──────────┴──────────┐
-        │                     │
-┌───────────────┐    ┌───────────────────┐
-│   Keycloak    │    │   Microservices   │
-│   IAM/Auth    │    │  Customer/Product │
-│  Port 8180    │    │  Ports 8001/8002  │
-└───────────────┘    └───────────────────┘
+│   + JWT Auth + External Authorization      │
+└────┬────────────────┬────────────────┬──────┘
+     │                │                │
+     │         ┌──────▼──────┐         │
+     │         │   AuthZ     │         │
+     │         │  Service    │         │
+     │         │  Port 9000  │         │
+     │         │ (Role Lookup│         │
+     │         │from PostgreSQL)       │
+     │         └─────────────┘         │
+     │                                 │
+┌────▼──────┐              ┌──────────▼────┐
+│ Keycloak  │              │ Microservices │
+│ IAM/Auth  │              │Customer/Product
+│Port 8180  │              │Ports 8001/8002│
+└───────────┘              └───────────────┘
 ```
 
 ## Features
 
 - **API Gateway**: Envoy proxy with routing and load balancing
 - **Authentication**: Keycloak OAuth 2.0 / OpenID Connect
-- **Security**: JWT token validation, client secrets, RBAC
+- **External Authorization**: Separate authz service for role management (PostgreSQL-backed)
+- **Security**: JWT token validation, external authz, client secrets, RBAC
 - **Microservices**: FastAPI-based customer and product services
 - **Containerization**: Docker Compose orchestration
 - **Production-Ready**: Security best practices and comprehensive documentation
