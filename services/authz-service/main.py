@@ -17,9 +17,13 @@ sys.path.append('/app')
 
 from authz_data_access import get_user_roles, UserNotFoundException
 from shared.common import setup_logging, create_health_response
+from redis_cache import get_cache_instance, PlatformRolesCache
 
 # Setup logging
 logger = setup_logging("authz-service")
+
+# Initialize cache (may be None if Redis not configured)
+cache: PlatformRolesCache | None = get_cache_instance()
 
 app = FastAPI(
     title="Authorization Service",
@@ -83,12 +87,111 @@ def health_check():
     Health check endpoint.
     
     Used by Docker healthcheck and Envoy health checking.
+    Includes Redis cache health status if caching is enabled.
     
     Returns:
         Health status information
     """
     logger.info("Health check requested")
-    return create_health_response("authz-service")
+    response = create_health_response("authz-service")
+    
+    # Add cache health status if caching is enabled
+    if cache:
+        response["cache_enabled"] = True
+        response["cache_healthy"] = cache.health_check()
+    else:
+        response["cache_enabled"] = False
+    
+    return response
+
+@app.get("/authz/me")
+async def get_current_user(request: Request):
+    """
+    Get current user information and roles.
+    
+    Public endpoint for React UI to fetch authenticated user's email and platform roles.
+    This endpoint requires a valid JWT token (validated by Envoy before reaching this service).
+    
+    Request Headers:
+        authorization: Bearer <jwt-token> (validated by Envoy)
+    
+    Returns:
+        200 OK: User information with roles
+        {
+            "email": "user@example.com",
+            "roles": ["user", "customer-manager"]
+        }
+        
+        401 Unauthorized: Missing or invalid JWT token
+        {
+            "detail": "No authorization token provided"
+        }
+    
+    Note: This endpoint uses the same role lookup logic as ext_authz,
+          including Redis caching for performance.
+    """
+    logger.info("User info request received (/authz/me)")
+    
+    # Extract JWT token
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        logger.warning("No authorization header in /authz/me request")
+        raise HTTPException(
+            status_code=401,
+            detail="No authorization token provided"
+        )
+    
+    parts = auth_header.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        logger.warning("Invalid authorization header format in /authz/me request")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authorization header format"
+        )
+    
+    token = parts[1]
+    
+    # Extract email from JWT
+    try:
+        email = extract_email_from_jwt(token)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to extract email from JWT: {e}")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid JWT token"
+        )
+    
+    logger.info(f"User info request for email: {email}")
+    
+    # Try cache first if available
+    roles = None
+    if cache:
+        roles = cache.get(email)
+    
+    # If cache miss, query database
+    if roles is None:
+        try:
+            roles = get_user_roles(email)
+            # Cache the result for future requests
+            if cache and roles:
+                cache.set(email, roles)
+        except UserNotFoundException:
+            logger.info(f"User not found in database: {email}. Returning unverified-user role.")
+            roles = ["unverified-user"]
+    
+    # Default to unverified-user if no roles found
+    if not roles:
+        logger.info(f"No roles found for {email}. Returning unverified-user role.")
+        roles = ["unverified-user"]
+    
+    logger.info(f"Returning user info for {email}: roles={roles}")
+    
+    return {
+        "email": email,
+        "roles": roles
+    }
 
 @app.api_route("/authz/roles", methods=["GET", "POST"])
 @app.api_route("/authz/roles/{path:path}", methods=["GET", "POST"])
@@ -174,10 +277,21 @@ async def get_user_roles_endpoint(request: Request, path: Optional[str] = None):
             )
 
         logger.info(f"[{request_id}] User email extracted: {email}")
-        try:
-            roles = get_user_roles(email)
-            if not roles:
-                logger.info(f"[{request_id}] No roles found for {email}. Returning role 'unverified-user'.")
+        
+        # Try cache first if available
+        roles = None
+        if cache:
+            roles = cache.get(email)
+        
+        # If cache miss, query database
+        if roles is None:
+            try:
+                roles = get_user_roles(email)
+                # Cache the result for future requests
+                if cache and roles:
+                    cache.set(email, roles)
+            except UserNotFoundException:
+                logger.info(f"[{request_id}] No DB entry for {email}. Returning role 'unverified-user'.")
                 return Response(
                     status_code=200,
                     content="",
@@ -186,18 +300,9 @@ async def get_user_roles_endpoint(request: Request, path: Optional[str] = None):
                         "x-user-roles": "unverified-user"
                     }
                 )
-            roles_str = ",".join(roles)
-            logger.info(f"[{request_id}] Roles found for {email}: {roles}")
-            return Response(
-                status_code=200,
-                content="",
-                headers={
-                    "x-user-email": email,
-                    "x-user-roles": roles_str
-                }
-            )
-        except UserNotFoundException:
-            logger.info(f"[{request_id}] No DB entry for {email}. Returning role 'unverified-user'.")
+        
+        if not roles:
+            logger.info(f"[{request_id}] No roles found for {email}. Returning role 'unverified-user'.")
             return Response(
                 status_code=200,
                 content="",
@@ -206,6 +311,17 @@ async def get_user_roles_endpoint(request: Request, path: Optional[str] = None):
                     "x-user-roles": "unverified-user"
                 }
             )
+        
+        roles_str = ",".join(roles)
+        logger.info(f"[{request_id}] Roles found for {email}: {roles}")
+        return Response(
+            status_code=200,
+            content="",
+            headers={
+                "x-user-email": email,
+                "x-user-roles": roles_str
+            }
+        )
     except Exception as e:
         logger.error(f"[{request_id}] Unexpected authorization error: {e}", exc_info=True)
         return Response(
