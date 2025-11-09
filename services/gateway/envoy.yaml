@@ -139,7 +139,7 @@ static_resources:
                 port_value: 9000
     health_checks:
     - timeout: 1s
-      interval: 30s
+      interval: 15s
       unhealthy_threshold: 2
       healthy_threshold: 2
       http_health_check:
@@ -161,7 +161,7 @@ static_resources:
                 port_value: 8000
     health_checks:
     - timeout: 1s
-      interval: 60s
+      interval: 30s
       unhealthy_threshold: 2
       healthy_threshold: 2
       http_health_check:
@@ -183,7 +183,7 @@ static_resources:
                 port_value: 8000
     health_checks:
     - timeout: 1s
-      interval: 60s
+      interval: 30s
       unhealthy_threshold: 2
       healthy_threshold: 2
       http_health_check:

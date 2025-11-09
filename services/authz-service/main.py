@@ -123,8 +123,6 @@ async def get_user_roles_endpoint(request: Request, path: Optional[str] = None):
     
     Returns:
         200 OK: User found, roles returned in headers
-        401 Unauthorized: Invalid or missing JWT token
-        403 Forbidden: User not found in role database
         500 Internal Server Error: Service error
     """
     # Extract request ID for logging correlation
