@@ -74,8 +74,8 @@ This document outlines the implementation plan for adding an external authorizat
    - Extracts user email from JWT
    - Checks Redis cache for roles (Phase B only)
    - On cache miss, queries PostgreSQL mock
-   - Returns roles in `X-User-Roles` header
-5. **Envoy RBAC Filter** checks if roles in `X-User-Roles` header match required roles
+   - Returns roles in `x-user-roles` header
+5. **Envoy RBAC Filter** checks if roles in `x-user-roles` header match required roles
 6. **Envoy Router** forwards request to appropriate service
 7. **Downstream Services** receive request with user context (unchanged)
 
@@ -156,7 +156,7 @@ Request Headers:
 Response: 200 OK (User found)
 Headers:
   X-User-Email: testuser@example.com
-  X-User-Roles: user,customer-manager
+  x-user-roles: user,customer-manager
 Body: {}
 
 Response: 403 Forbidden (User not found)

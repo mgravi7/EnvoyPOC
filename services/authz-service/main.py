@@ -7,22 +7,19 @@ from a PostgreSQL database (currently mocked). Roles are returned in response
 headers and used by Envoy's RBAC filter for authorization decisions.
 """
 
+import sys
 from fastapi import FastAPI, Request, HTTPException, Response
-import logging
 import os
 import json
 import base64
 from typing import Optional
+sys.path.append('/app')
 
 from authz_data_access import get_user_roles, UserNotFoundException
+from shared.common import setup_logging, create_health_response
 
 # Setup logging
-log_level = os.getenv("LOG_LEVEL", "INFO")
-logging.basicConfig(
-    level=log_level,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+logger = setup_logging("authz-service")
 
 app = FastAPI(
     title="Authorization Service",
@@ -90,12 +87,8 @@ def health_check():
     Returns:
         Health status information
     """
-    return {
-        "status": "healthy",
-        "service": "authz-service",
-        "version": "1.0.0"
-    }
-
+    logger.info("Health check requested")
+    return create_health_response("authz-service")
 
 @app.api_route("/authz/roles", methods=["GET", "POST"])
 @app.api_route("/authz/roles/{path:path}", methods=["GET", "POST"])

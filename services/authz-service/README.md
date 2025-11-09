@@ -15,7 +15,7 @@ The authorization service is called by Envoy's `ext_authz` filter for each authe
 ```
 Envoy → ext_authz → /authz/roles → AuthZ Service → PostgreSQL (mock)
                                    ↓
-                                   Returns: X-User-Roles header
+                                   Returns: x-user-roles header
 ```
 
 ## API Endpoints
@@ -43,7 +43,7 @@ Request Headers:
 Response: 200 OK
 Headers:
   X-User-Email: testuser@example.com
-  X-User-Roles: user,customer-manager
+  x-user-roles: user,customer-manager
 Body: (empty)
 ```
 

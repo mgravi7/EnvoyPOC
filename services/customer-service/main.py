@@ -34,7 +34,7 @@ def get_customers(current_user: JWTPayload = Depends(get_current_user_from_heade
     - Users with 'customer-manager' role can retrieve all customers
     - Other users can only retrieve their own customer record (email must match)
     
-    Note: Roles are provided by authz-service via X-User-Roles header (set by Envoy)
+    Note: Roles are provided by authz-service via x-user-roles header (set by Envoy)
     """
     logger.info(f"Fetching customers (requested by: {current_user.email})")
 
@@ -70,7 +70,7 @@ def get_customer(customer_id: int, current_user: JWTPayload = Depends(get_curren
     - Users with 'customer-manager' role can retrieve any customer
     - Other users can only retrieve their own customer record (email must match)
     
-    Note: Roles are provided by authz-service via X-User-Roles header (set by Envoy)
+    Note: Roles are provided by authz-service via x-user-roles header (set by Envoy)
     """
     logger.info(f"Fetching customer with ID: {customer_id} (requested by: {current_user.email})")
 

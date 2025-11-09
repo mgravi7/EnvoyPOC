@@ -136,53 +136,74 @@ async def get_current_user_from_headers(
     FastAPI dependency to extract current user from headers set by Envoy ext_authz filter.
     
     This function is designed for the external authorization service architecture where:
-    1. Envoy validates JWT token
+    1. Envoy validates JWT token (optional for some routes)
     2. Envoy calls authz-service to get user roles
     3. Envoy forwards request with x-user-email and x-user-roles headers
     
-    The function uses headers as the primary source and JWT as fallback for user identity.
+    The function supports both authenticated users (with JWT) and guest users (without JWT).
+    Guest users will have role 'guest' assigned by authz-service.
     
     Headers Expected (set by Envoy, HTTP/2 lowercase):
-        authorization: Bearer <jwt-token> (for user identity)
-        x-user-email: user@example.com (from authz-service)
-        x-user-roles: user,customer-manager (comma-separated, from authz-service)
+        authorization: Bearer <jwt-token> (optional, for authenticated users)
+        x-user-email: user@example.com (from authz-service, empty for guests)
+        x-user-roles: user,customer-manager or guest (comma-separated, from authz-service)
     
     Args:
-        authorization: Authorization header value (JWT token)
+        authorization: Authorization header value (JWT token, optional)
         x_user_email: User email from authz-service (via Envoy)
         x_user_roles: Comma-separated roles from authz-service (via Envoy)
     
     Returns:
         JWTPayload: User information with roles from authz-service
     
-    Raises:
-        HTTPException: If authorization header is missing or invalid
-    
     Usage:
         @app.get("/protected")
         def protected_endpoint(current_user: JWTPayload = Depends(get_current_user_from_headers)):
             return {"email": current_user.email, "roles": current_user.roles}
     """
-    if not authorization:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing authorization header"
-        )
-    
-    # Extract token from "Bearer <token>"
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authorization header format. Expected 'Bearer <token>'"
-        )
-    
-    token = parts[1]
-    
     # Parse roles from x-user-roles header (comma-separated)
     roles = []
     if x_user_roles:
         roles = [role.strip() for role in x_user_roles.split(",") if role.strip()]
+    
+    # Handle guest users (no authorization header)
+    if not authorization:
+        # Only allow guest access if authz-service explicitly set "guest" role
+        if "guest" in roles:
+            guest_payload = {
+                "email": x_user_email or "",
+                "preferred_username": "guest",
+                "name": "Guest User",
+                "sub": "guest"
+            }
+            return JWTPayload(guest_payload, roles=roles)
+        else:
+            # No authorization and no guest role - deny access
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing authorization header"
+            )
+    
+    # Extract token from "Bearer <token>"
+    parts = authorization.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        # Invalid authorization format - check if guest role is present
+        if "guest" in roles:
+            guest_payload = {
+                "email": x_user_email or "",
+                "preferred_username": "guest",
+                "name": "Guest User",
+                "sub": "guest"
+            }
+            return JWTPayload(guest_payload, roles=roles)
+        else:
+            # Invalid authorization format and no guest role - deny access
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authorization header format. Expected 'Bearer <token>'"
+            )
+    
+    token = parts[1]
     
     # Decode JWT with roles from header
     jwt_payload = decode_jwt_payload(token, roles=roles)

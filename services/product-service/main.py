@@ -1,3 +1,8 @@
+
+# Product Service: All users, including 'guest', have access to product information.
+# There are no role-based restrictions on any endpoint in this service.
+# User info is only used for logging and future fine-grained authorization if needed.
+
 from fastapi import FastAPI, HTTPException, Depends
 from typing import List
 import os
@@ -28,10 +33,11 @@ def health_check():
 def get_products(current_user: JWTPayload = Depends(get_current_user_from_headers)):
     """
     Get all products
-    
-    Note: Gateway-level authorization handled by Envoy (requires 'user' or 'admin' role).
+
+    All roles, including 'guest', can access this endpoint.
+    No restrictions on who can see product information.
     User information available for logging and future fine-grained authorization.
-    Roles are provided by authz-service via X-User-Roles header (set by Envoy).
+    Roles are provided by authz-service via x-user-roles header (set by Envoy).
     """
     logger.info(f"Fetching all products (requested by: {current_user.email}, roles: {current_user.roles})")
     
@@ -44,10 +50,11 @@ def get_products(current_user: JWTPayload = Depends(get_current_user_from_header
 def get_product(product_id: int, current_user: JWTPayload = Depends(get_current_user_from_headers)):
     """
     Get a specific product by ID
-    
-    Note: Gateway-level authorization handled by Envoy (requires 'user' or 'admin' role).
+
+    All roles, including 'guest', can access this endpoint.
+    No restrictions on who can see product information.
     User information available for logging and future fine-grained authorization.
-    Roles are provided by authz-service via X-User-Roles header (set by Envoy).
+    Roles are provided by authz-service via x-user-roles header (set by Envoy).
     """
     logger.info(f"Fetching product with ID: {product_id} (requested by: {current_user.email})")
     
@@ -64,10 +71,11 @@ def get_product(product_id: int, current_user: JWTPayload = Depends(get_current_
 def get_products_by_category(category: str, current_user: JWTPayload = Depends(get_current_user_from_headers)):
     """
     Get products by category
-    
-    Note: Gateway-level authorization handled by Envoy (requires 'user' or 'admin' role).
+
+    All roles, including 'guest', can access this endpoint.
+    No restrictions on who can see product information.
     User information available for logging and future fine-grained authorization.
-    Roles are provided by authz-service via X-User-Roles header (set by Envoy).
+    Roles are provided by authz-service via x-user-roles header (set by Envoy).
     """
     logger.info(f"Fetching products by category: {category} (requested by: {current_user.email})")
     
