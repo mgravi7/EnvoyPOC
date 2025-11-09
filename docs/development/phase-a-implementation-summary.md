@@ -23,7 +23,7 @@
 1. **Envoy Gateway Configuration**
    - Added `ext_authz` HTTP filter (between JWT and RBAC)
    - Calls authz service at `/authz/roles` for each request
-   - Receives roles in `X-User-Roles` header
+   - Receives roles in `x-user-roles` header
    - Updated RBAC filter to use header-based roles (not JWT metadata)
    - Added `authz_service_cluster` with health checking
 
@@ -248,7 +248,7 @@ docker-compose logs authz-service | Select-String "not found"
 - Roles stored in PostgreSQL (currently mocked)
 - Envoy calls authz service for role lookup
 - AuthZ service extracts email from JWT
-- Roles returned in `X-User-Roles` header
+- Roles returned in `x-user-roles` header
 - RBAC filter checks header (not JWT)
 
 ### What Stayed the Same

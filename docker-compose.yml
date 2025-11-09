@@ -26,9 +26,8 @@ services:
   # Authorization Service
   authz-service:
     build:
-      context: ./services/authz-service
-      dockerfile: Dockerfile
-    container_name: authz-service
+      context: ./services
+      dockerfile: authz-service/Dockerfile
     environment:
       - SERVICE_PORT=9000
       - LOG_LEVEL=INFO
@@ -36,12 +35,6 @@ services:
     networks:
       - microservices-network
     # NO ports exposed - internal network only for security
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/authz/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
     # depends_on removed
 
   # API Gateway (Envoy)
