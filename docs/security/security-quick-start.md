@@ -166,7 +166,6 @@ curl http://localhost:8080/customers
 - [Detailed Security Guide](security-guide.md) - Comprehensive documentation
 - [Keycloak Setup](../setup/keycloak-setup.md) - Keycloak configuration
 - [React Integration](../development/react-auth-integration.md) - UI authentication
-- [Security Fixes](security-fixes.md) - Recent security improvements
 
 ## Quick Commands Reference
 

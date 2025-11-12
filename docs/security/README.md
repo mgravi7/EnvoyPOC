@@ -15,14 +15,6 @@ Comprehensive security documentation covering:
 - Network security
 - Monitoring and auditing
 
-### [Security Fixes](security-fixes.md)
-Summary of security improvements implemented:
-- Client secret implementation
-- Redirect URI restrictions
-- Service-to-service authentication
-- Migration guide
-- Production checklist
-
 ### [Quick Reference](quick-reference.md)
 Quick reference card for:
 - Client secrets

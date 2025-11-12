@@ -44,7 +44,6 @@ Complete documentation for the API Gateway Proof of Concept.
 ### Security
 - [Security Quick Start](security/security-quick-start.md) - Concise security guide
 - [Security Guide](security/security-guide.md) - Detailed security documentation
-- [Security Fixes](security/security-fixes.md) - Recent improvements
 
 ### Architecture
 - [System Architecture](architecture/system-architecture.md) - System overview
